@@ -1,21 +1,39 @@
-name: CI/CD Pipeline
+name: Build, Push and Deploy
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
-    - name: Clone codes
+    - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Docker login
+    - name: Log in to Docker Hub
       run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-    - name: Create Docker image
-      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/flask-cicd-demo:latest .
+    - name: Build Docker image
+      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/myapp:latest .
 
-    - name: Push to Docker Hub
-      run: docker push ${{ secrets.DOCKER_USERNAME }}/flask-cicd-demo:latest
+    - name: Push Docker image
+      run: docker push ${{ secrets.DOCKER_USERNAME }}/myapp:latest
+
+    - name: Deploy to EC2 via SSH
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: 52.7.54.68
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          echo "Stopping and removing existing container..."
+          docker rm -f myapp || true
+          
+          echo "Pulling latest Docker image from Docker Hub..."
+          docker pull ${{ secrets.DOCKER_USERNAME }}/myapp:latest
+          
+          echo "Starting new container..."
+          docker run -d --name myapp -p 80:5000 ${{ secrets.DOCKER_USERNAME }}/myapp:latest
