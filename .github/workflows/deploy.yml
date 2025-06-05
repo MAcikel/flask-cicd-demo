@@ -26,7 +26,7 @@ jobs:
       uses: appleboy/ssh-action@v0.1.10
       with:
         host: 52.7.54.68
-        username: ${{ secrets.EC2_USER }}
+        username: ec2-user
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           echo "Stopping and removing existing container..."
